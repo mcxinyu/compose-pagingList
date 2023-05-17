@@ -55,20 +55,24 @@ fun <T : Any> LazyGridScope.itemPaging(
     span: Int,
     loadingContent: @Composable (() -> Unit)? = { DefaultLoadingContent() },
     noMoreContent: @Composable (() -> Unit)? = { DefaultNoMoreContent() },
-    errorContent: @Composable ((retry: (() -> Unit)?) -> Unit)? = { retry ->
-        DefaultErrorContent(
-            retry
-        )
+    errorContent: @Composable ((error: Throwable, retry: (() -> Unit)?) -> Unit)? = { error, retry ->
+        DefaultErrorContent(retry, error.message)
     },
 ) {
     when (pagingData.loadState.append) {
         is LoadState.Loading -> loadingContent?.let { item(span = { GridItemSpan(span) }) { loadingContent() } }
-        is LoadState.Error -> errorContent?.let { item(span = { GridItemSpan(span) }) { errorContent { pagingData.retry() } } }
+        is LoadState.Error -> errorContent?.let {
+            item(span = { GridItemSpan(span) }) {
+                errorContent((pagingData.loadState.append as LoadState.Error).error) {
+                    pagingData.retry()
+                }
+            }
+        }
+
         is LoadState.NotLoading ->
             if (pagingData.loadState.append.endOfPaginationReached && noMoreContent != null) {
                 item(span = { GridItemSpan(span) }) { noMoreContent() }
             }
-
     }
 }
 
